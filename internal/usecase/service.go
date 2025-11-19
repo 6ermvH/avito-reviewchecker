@@ -20,10 +20,11 @@ var (
 	ErrPRMerged               = errors.New("pull request already merged")
 )
 
+//go:generate mockgen -source=service.go -destination=../repository/mocks/repository_mock.go -package=mocks_repository
 type Repository interface {
 	GetTeamByName(ctx context.Context, name string) (model.Team, error)
 	CreateTeam(ctx context.Context, name string) (model.Team, error)
-	UpsertTeamMembers(ctx context.Context, teamID string, users []model.User) error
+	InsertTeamMembers(ctx context.Context, teamID string, users []model.User) error
 	ListTeamMembers(ctx context.Context, teamID string) ([]model.User, error)
 	GetUserByID(ctx context.Context, userID string) (model.User, error)
 
@@ -52,7 +53,7 @@ func (s *Service) UpdateTeam(ctx context.Context, teamName string, users []model
 		return fmt.Errorf("create team %q: %w", teamName, err)
 	}
 
-	if err := s.repo.UpsertTeamMembers(ctx, team.ID, users); err != nil {
+	if err := s.repo.InsertTeamMembers(ctx, team.ID, users); err != nil {
 		return fmt.Errorf("upsert team %q members: %w", teamName, err)
 	}
 
