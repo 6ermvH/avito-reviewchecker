@@ -20,3 +20,8 @@ clean:
 unit-test:
 	go generate ./...
 	GOCACHE=$(PWD)/.cache/go-build GOMODCACHE=$(PWD)/.cache/go-mod go test ./... -count=1 -cover
+
+.PHONY: integration-test
+integration-test:
+	docker compose -f docker-compose-test.yml up --build tests
+	docker compose -f docker-compose-test.yml down
