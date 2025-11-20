@@ -21,6 +21,8 @@ type Service interface {
 	CreatePR(ctx context.Context, prID, prName, authorID string) (model.PullRequest, error)
 	MergePR(ctx context.Context, prID string) (model.PullRequest, error)
 	ReassignReviewer(ctx context.Context, prID, oldUserID string) (model.PullRequest, string, error)
+	ListReviewerStats(ctx context.Context) ([]model.ReviewerStat, error)
+	GetPullRequestStats(ctx context.Context) (model.PullRequestStats, error)
 }
 
 func HandleTeamAdd(svc Service) http.HandlerFunc {

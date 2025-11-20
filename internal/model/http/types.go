@@ -85,3 +85,28 @@ type PullRequestReassignRequest struct {
 	ID        string `json:"pull_request_id"`
 	OldUserID string `json:"old_user_id"`
 }
+
+type ReviewerStat struct {
+	UserID        string `json:"user_id"`
+	Username      string `json:"username"`
+	TeamName      string `json:"team_name"`
+	TotalAssigned int    `json:"total_assigned"`
+	OpenAssigned  int    `json:"open_assigned"`
+}
+
+type ReviewerStatsResponse struct {
+	Reviewers []ReviewerStat `json:"reviewers"`
+}
+
+type AuthorStat struct {
+	AuthorID string `json:"author_id"`
+	Count    int    `json:"count"`
+}
+
+type PullRequestStatsResponse struct {
+	Total         int          `json:"total"`
+	Open          int          `json:"open"`
+	Merged        int          `json:"merged"`
+	AverageReview float64      `json:"average_reviewers"`
+	ByAuthor      []AuthorStat `json:"by_author"`
+}

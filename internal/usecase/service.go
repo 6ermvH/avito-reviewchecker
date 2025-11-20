@@ -52,6 +52,8 @@ type Repository interface {
 		ctx context.Context,
 		prID, oldUserID, newUserID string,
 	) (model.PullRequest, error)
+	ListReviewerStats(ctx context.Context) ([]model.ReviewerStat, error)
+	GetPullRequestStats(ctx context.Context) (model.PullRequestStats, error)
 }
 
 func New(repo Repository, logger *slog.Logger) *Service {

@@ -476,3 +476,60 @@ func TestReassignReviewer(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestListReviewerStats(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks_repository.NewMockRepository(ctrl)
+	service := New(repo, slog.Default())
+
+	expected := []model.ReviewerStat{
+		{UserID: "u1", Username: "alice", TeamName: "team", TotalAssigned: 3, OpenAssigned: 1},
+	}
+
+	repo.EXPECT().
+		ListReviewerStats(gomock.Any()).
+		Return(expected, nil)
+
+	stats, err := service.ListReviewerStats(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, expected, stats)
+
+	repo.EXPECT().
+		ListReviewerStats(gomock.Any()).
+		Return(nil, errors.New("boom"))
+
+	_, err = service.ListReviewerStats(context.Background())
+	require.Error(t, err)
+}
+
+func TestGetPullRequestStats(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks_repository.NewMockRepository(ctrl)
+	service := New(repo, slog.Default())
+
+	expected := model.PullRequestStats{
+		Total:         2,
+		Open:          1,
+		Merged:        1,
+		AverageReview: 1.5,
+	}
+
+	repo.EXPECT().
+		GetPullRequestStats(gomock.Any()).
+		Return(expected, nil)
+
+	stats, err := service.GetPullRequestStats(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, expected, stats)
+
+	repo.EXPECT().
+		GetPullRequestStats(gomock.Any()).
+		Return(model.PullRequestStats{}, errors.New("boom"))
+
+	_, err = service.GetPullRequestStats(context.Background())
+	require.Error(t, err)
+}

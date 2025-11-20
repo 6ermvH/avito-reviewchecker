@@ -110,4 +110,9 @@ func registerRoutes(r chi.Router, svc httpserver.Service) {
 	r.Post("/pullRequest/create", httpserver.HandleCreatePR(svc))
 	r.Post("/pullRequest/merge", httpserver.HandleMergePR(svc))
 	r.Post("/pullRequest/reassign", httpserver.HandleReassignPR(svc))
+
+	r.Route("/stats", func(r chi.Router) {
+		r.Get("/reviewers", httpserver.HandleReviewerStats(svc))
+		r.Get("/pullRequests", httpserver.HandlePullRequestStats(svc))
+	})
 }
