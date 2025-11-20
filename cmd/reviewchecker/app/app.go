@@ -98,7 +98,7 @@ func parseLogLevel(level string) slog.Level {
 	}
 }
 
-func registerRoutes(r chi.Router, svc Service) {
+func registerRoutes(r chi.Router, svc httpserver.Service) {
 	r.Route("/team", func(r chi.Router) {
 		r.Post("/add", httpserver.HandleTeamAdd(svc))
 		r.Get("/get", httpserver.HandleTeamGet(svc))

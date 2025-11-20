@@ -1,0 +1,37 @@
+version: "2"
+
+run:
+  tests: false
+  timeout: 1m
+  relative-path-mode: gomod
+  concurrency: 4
+
+linters-settings:
+  interfacebloat:
+    max: 11
+
+linters:
+  default: all
+  disable:
+    - varnamelen
+    - tagliatelle
+    - revive
+    - gosec
+    - exhaustruct
+    - depguard
+
+exclusions:
+  paths:
+    - "gen/openapi/"
+    - "gen/mock/"
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+    - golines
+  exclusions:
+    paths:
+      - "gen/openapi/"
+      - "gen/mock/"

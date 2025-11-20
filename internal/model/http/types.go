@@ -46,6 +46,18 @@ type PullRequest struct {
 	MergedAt          string   `json:"mergedAt,omitempty"`
 }
 
+type ErrorCode string
+
+const (
+	ErrorCodeNotFound    ErrorCode = "NOT_FOUND"
+	ErrorCodePRMerged    ErrorCode = "PR_MERGED"
+	ErrorCodeNotAssigned ErrorCode = "NOT_ASSIGNED"
+	ErrorCodeNoCandidate ErrorCode = "NO_CANDIDATE"
+	ErrorCodeTeamExists  ErrorCode = "TEAM_EXISTS"
+	ErrorCodePRExists    ErrorCode = "PR_EXISTS"
+	ErrorCodeInternal    ErrorCode = "INTERNAL_ERROR"
+)
+
 type PullRequestResponse struct {
 	PR         PullRequest `json:"pr"`
 	ReplacedBy string      `json:"replaced_by,omitempty"`

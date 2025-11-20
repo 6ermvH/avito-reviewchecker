@@ -246,28 +246,28 @@ func HandleReassignPR(svc Service) http.HandlerFunc {
 
 func writeDomainError(w http.ResponseWriter, err error, overrides map[string]int) {
 	status := http.StatusInternalServerError
-	code := "INTERNAL_ERROR"
+	code := httpmodel.ErrorCodeInternal
 
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
 		status = http.StatusNotFound
-		code = "NOT_FOUND"
+		code = httpmodel.ErrorCodeNotFound
 	case errors.Is(err, usecase.ErrPRMerged):
 		status = http.StatusConflict
-		code = "PR_MERGED"
+		code = httpmodel.ErrorCodePRMerged
 	case errors.Is(err, usecase.ErrReviewerNotAssigned):
 		status = http.StatusConflict
-		code = "NOT_ASSIGNED"
+		code = httpmodel.ErrorCodeNotAssigned
 	case errors.Is(err, usecase.ErrNoReplacementCandidate):
 		status = http.StatusConflict
-		code = "NO_CANDIDATE"
+		code = httpmodel.ErrorCodeNoCandidate
 	}
 
 	if customStatus, ok := overrides[err.Error()]; ok {
 		status = customStatus
 	}
 
-	writeError(w, status, code, err.Error())
+	writeError(w, status, string(code), err.Error())
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
