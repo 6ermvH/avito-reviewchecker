@@ -12,13 +12,11 @@ const (
 type User struct {
 	ID       string
 	Username string
-	TeamID   string
 	TeamName string
 	IsActive bool
 }
 
 type Team struct {
-	ID   string
 	Name string
 }
 
