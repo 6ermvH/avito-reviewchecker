@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"time"
 
 	"github.com/6ermvH/avito-reviewchecker/internal/model"
@@ -14,13 +15,18 @@ import (
 type Service struct {
 	repo   Repository
 	logger *slog.Logger
+	rng    *rand.Rand
 }
 
 var (
 	ErrReviewerNotAssigned    = errors.New("reviewer not assigned to PR")
 	ErrNoReplacementCandidate = errors.New("no active candidate in team")
 	ErrPRMerged               = errors.New("pull request already merged")
+	ErrTeamExists             = errors.New("team already exists")
+	ErrPullRequestExists      = errors.New("pull request already exists")
 )
+
+const shuffleThreshold = 2
 
 //go:generate mockgen -source=service.go -destination=../repository/mocks/repository_mock.go -package=mocks_repository
 //nolint:interfacebloat
@@ -52,21 +58,23 @@ func New(repo Repository, logger *slog.Logger) *Service {
 	return &Service{
 		repo:   repo,
 		logger: logger,
+		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
 func (s *Service) UpdateTeam(ctx context.Context, teamName string, users []model.User) error {
-	team, err := s.repo.GetTeamByName(ctx, teamName)
-
 	s.logger.Debug("update team", "teamName", teamName, "users", users)
 
+	_, err := s.repo.GetTeamByName(ctx, teamName)
+
 	switch {
-	case errors.Is(err, repository.ErrNotFound):
-		team, err = s.repo.CreateTeam(ctx, teamName)
-	case err != nil:
+	case err == nil:
+		return ErrTeamExists
+	case err != nil && !errors.Is(err, repository.ErrNotFound):
 		return fmt.Errorf("find team %q: %w", teamName, err)
 	}
 
+	team, err := s.repo.CreateTeam(ctx, teamName)
 	if err != nil {
 		return fmt.Errorf("create team %q: %w", teamName, err)
 	}
@@ -136,7 +144,7 @@ func (s *Service) CreatePR(
 		return model.PullRequest{}, fmt.Errorf("list team members for author %q: %w", authorID, err)
 	}
 
-	reviewerIDs := selectInitialReviewers(author.ID, members)
+	reviewerIDs := selectInitialReviewers(author.ID, members, s.rng)
 
 	pr := model.PullRequest{
 		ID:        prID,
@@ -148,6 +156,10 @@ func (s *Service) CreatePR(
 
 	created, err := s.repo.CreatePullRequest(ctx, pr)
 	if err != nil {
+		if errors.Is(err, repository.ErrAlreadyExists) {
+			return model.PullRequest{}, ErrPullRequestExists
+		}
+
 		return model.PullRequest{}, fmt.Errorf(
 			"create pr with id %q name %q for user %q: %w",
 			prID,
@@ -215,7 +227,7 @@ func (s *Service) ReassignReviewer(
 		)
 	}
 
-	candidates := filterCandidates(members, pr, oldUserID)
+	candidates := filterCandidates(members, pr, oldUserID, s.rng)
 	if len(candidates) == 0 {
 		return model.PullRequest{}, "", ErrNoReplacementCandidate
 	}
@@ -246,7 +258,12 @@ func isReviewerAssigned(pr model.PullRequest, reviewerID string) bool {
 	return false
 }
 
-func filterCandidates(members []model.User, pr model.PullRequest, removedReviewer string) []string {
+func filterCandidates(
+	members []model.User,
+	pr model.PullRequest,
+	removedReviewer string,
+	rng *rand.Rand,
+) []string {
 	existing := make(map[string]struct{}, len(pr.Reviewers))
 	for _, reviewer := range pr.Reviewers {
 		existing[reviewer] = struct{}{}
@@ -274,10 +291,12 @@ func filterCandidates(members []model.User, pr model.PullRequest, removedReviewe
 		candidates = append(candidates, member.ID)
 	}
 
+	shuffleStrings(candidates, rng)
+
 	return candidates
 }
 
-func selectInitialReviewers(authorID string, members []model.User) []string {
+func selectInitialReviewers(authorID string, members []model.User, rng *rand.Rand) []string {
 	candidates := make([]string, 0, len(members))
 
 	for _, member := range members {
@@ -292,10 +311,22 @@ func selectInitialReviewers(authorID string, members []model.User) []string {
 		candidates = append(candidates, member.ID)
 	}
 
+	shuffleStrings(candidates, rng)
+
 	//nolint:mnd
 	if len(candidates) > 2 {
 		return candidates[:2]
 	}
 
 	return candidates
+}
+
+func shuffleStrings(values []string, rng *rand.Rand) {
+	if len(values) < shuffleThreshold {
+		return
+	}
+
+	rng.Shuffle(len(values), func(i, j int) {
+		values[i], values[j] = values[j], values[i]
+	})
 }

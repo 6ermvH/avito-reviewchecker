@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/6ermvH/avito-reviewchecker/internal/model"
 	"github.com/6ermvH/avito-reviewchecker/internal/repository"
 )
@@ -174,6 +176,10 @@ RETURNING id, name, author_id, status, created_at, merged_at
 	if err := tx.QueryRowContext(ctx, insertPR, pr.ID, pr.Name, pr.AuthorID, pr.Status).
 		Scan(&stored.ID, &stored.Name, &stored.AuthorID, &stored.Status, &stored.CreatedAt, &stored.MergedAt); err != nil {
 		_ = tx.Rollback()
+
+		if isUniqueViolation(err) {
+			return model.PullRequest{}, repository.ErrAlreadyExists
+		}
 
 		return model.PullRequest{}, fmt.Errorf("create pr, get query row: %w", err)
 	}
@@ -380,4 +386,14 @@ ORDER BY slot
 	}
 
 	return reviewers, nil
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		// 23505 = unique_violation
+		return pgErr.Code == "23505"
+	}
+
+	return false
 }

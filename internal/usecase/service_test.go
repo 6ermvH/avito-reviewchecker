@@ -24,16 +24,14 @@ func TestUpdateTeam(t *testing.T) {
 	service := New(repo, slog.Default())
 	members := []model.User{}
 
-	t.Run("Good: team exists", func(t *testing.T) {
+	t.Run("Bad: team exists", func(t *testing.T) {
 		team := model.Team{Name: "team"}
 		repo.EXPECT().
 			GetTeamByName(gomock.Any(), "team").
 			Return(team, nil)
-		repo.EXPECT().
-			InsertTeamMembers(gomock.Any(), team.Name, members).
-			Return(nil)
 
-		require.NoError(t, service.UpdateTeam(context.Background(), "team", members))
+		err := service.UpdateTeam(context.Background(), "team", members)
+		require.ErrorIs(t, err, ErrTeamExists)
 	})
 
 	t.Run("Good: create new team", func(t *testing.T) {
@@ -59,10 +57,24 @@ func TestUpdateTeam(t *testing.T) {
 		require.Error(t, service.UpdateTeam(context.Background(), "boom", members))
 	})
 
+	t.Run("Bad: create team error", func(t *testing.T) {
+		repo.EXPECT().
+			GetTeamByName(gomock.Any(), "team").
+			Return(model.Team{}, repository.ErrNotFound)
+		repo.EXPECT().
+			CreateTeam(gomock.Any(), "team").
+			Return(model.Team{}, errors.New("create error"))
+
+		require.Error(t, service.UpdateTeam(context.Background(), "team", members))
+	})
+
 	t.Run("Bad: insert members error", func(t *testing.T) {
 		team := model.Team{Name: "team"}
 		repo.EXPECT().
 			GetTeamByName(gomock.Any(), "team").
+			Return(model.Team{}, repository.ErrNotFound)
+		repo.EXPECT().
+			CreateTeam(gomock.Any(), "team").
 			Return(team, nil)
 		repo.EXPECT().
 			InsertTeamMembers(gomock.Any(), team.Name, members).
@@ -208,7 +220,8 @@ func TestCreatePR(t *testing.T) {
 				require.Equal(t, "new feature", pr.Name)
 				require.Equal(t, "author", pr.AuthorID)
 				require.Equal(t, model.PRStatusOpen, pr.Status)
-				require.Equal(t, []string{"u1", "u2"}, pr.Reviewers)
+				require.Len(t, pr.Reviewers, 2)
+				require.ElementsMatch(t, []string{"u1", "u2"}, pr.Reviewers)
 				return pr, nil
 			})
 

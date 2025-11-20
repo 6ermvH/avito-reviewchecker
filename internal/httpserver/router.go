@@ -27,31 +27,37 @@ func HandleTeamAdd(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req httpmodel.Team
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "invalid JSON")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"invalid JSON",
+			)
 
 			return
 		}
 
 		if req.TeamName == "" {
-			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "team_name is required")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"team_name is required",
+			)
 
 			return
 		}
 
-		users := make([]model.User, 0, len(req.Members))
+		users, err := buildTeamUsers(req.Members)
+		if err != nil {
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				err.Error(),
+			)
 
-		for _, member := range req.Members {
-			if member.UserID == "" {
-				writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "user_id is required")
-
-				return
-			}
-
-			users = append(users, model.User{
-				ID:       member.UserID,
-				Username: member.Username,
-				IsActive: member.IsActive,
-			})
+			return
 		}
 
 		if err := svc.UpdateTeam(r.Context(), req.TeamName, users); err != nil {
@@ -62,7 +68,12 @@ func HandleTeamAdd(svc Service) http.HandlerFunc {
 
 		team, members, err := svc.GetTeam(r.Context(), req.TeamName)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+			writeError(
+				w,
+				http.StatusInternalServerError,
+				string(httpmodel.ErrorCodeInternal),
+				err.Error(),
+			)
 
 			return
 		}
@@ -77,7 +88,12 @@ func HandleTeamGet(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		teamName := r.URL.Query().Get("team_name")
 		if teamName == "" {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "team_name is required")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"team_name is required",
+			)
 
 			return
 		}
@@ -97,13 +113,23 @@ func HandleSetUserActive(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req httpmodel.SetUserActiveRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "invalid JSON")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"invalid JSON",
+			)
 
 			return
 		}
 
 		if req.UserID == "" {
-			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "user_id is required")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"user_id is required",
+			)
 
 			return
 		}
@@ -127,7 +153,12 @@ func HandleGetUserReview(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.URL.Query().Get("user_id")
 		if userID == "" {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "user_id is required")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"user_id is required",
+			)
 
 			return
 		}
@@ -150,13 +181,23 @@ func HandleCreatePR(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req httpmodel.PullRequestCreateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "invalid JSON")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"invalid JSON",
+			)
 
 			return
 		}
 
 		if req.ID == "" || req.Name == "" || req.AuthorID == "" {
-			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "missing required fields")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"missing required fields",
+			)
 
 			return
 		}
@@ -178,13 +219,23 @@ func HandleMergePR(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req httpmodel.PullRequestMergeRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "invalid JSON")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"invalid JSON",
+			)
 
 			return
 		}
 
 		if req.ID == "" {
-			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "pull_request_id is required")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"pull_request_id is required",
+			)
 
 			return
 		}
@@ -209,7 +260,12 @@ func HandleReassignPR(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req httpmodel.PullRequestReassignRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "invalid JSON")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				string(httpmodel.ErrorCodeInvalidInput),
+				"invalid JSON",
+			)
 
 			return
 		}
@@ -261,6 +317,12 @@ func writeDomainError(w http.ResponseWriter, err error, overrides map[string]int
 	case errors.Is(err, usecase.ErrNoReplacementCandidate):
 		status = http.StatusConflict
 		code = httpmodel.ErrorCodeNoCandidate
+	case errors.Is(err, usecase.ErrTeamExists):
+		status = http.StatusBadRequest
+		code = httpmodel.ErrorCodeTeamExists
+	case errors.Is(err, usecase.ErrPullRequestExists):
+		status = http.StatusConflict
+		code = httpmodel.ErrorCodePRExists
 	}
 
 	if customStatus, ok := overrides[err.Error()]; ok {
@@ -342,4 +404,30 @@ func mapPRShortList(prs []model.PullRequest) []httpmodel.PullRequestShort {
 	}
 
 	return resp
+}
+
+var (
+	errUserIDRequired   = errors.New("user_id is required")
+	errUsernameRequired = errors.New("username is required")
+)
+
+func buildTeamUsers(members []httpmodel.TeamMember) ([]model.User, error) {
+	users := make([]model.User, 0, len(members))
+
+	for _, member := range members {
+		switch {
+		case member.UserID == "":
+			return nil, errUserIDRequired
+		case member.Username == "":
+			return nil, errUsernameRequired
+		}
+
+		users = append(users, model.User{
+			ID:       member.UserID,
+			Username: member.Username,
+			IsActive: member.IsActive,
+		})
+	}
+
+	return users, nil
 }
