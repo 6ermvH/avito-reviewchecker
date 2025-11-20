@@ -429,6 +429,7 @@ func buildTeamUsers(members []httpmodel.TeamMember) ([]model.User, error) {
 		if _, exists := seen[member.UserID]; exists {
 			return nil, errDuplicateMemberIDs
 		}
+
 		seen[member.UserID] = struct{}{}
 
 		users = append(users, model.User{

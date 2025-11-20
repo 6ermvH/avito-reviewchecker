@@ -30,9 +30,12 @@ ORDER BY total_assigned DESC, u.id
 	defer rows.Close()
 
 	var stats []model.ReviewerStat
+
 	for rows.Next() {
 		var stat model.ReviewerStat
-		if err := rows.Scan(&stat.UserID, &stat.Username, &stat.TeamName, &stat.TotalAssigned, &stat.OpenAssigned); err != nil {
+		if err := rows.Scan(&stat.UserID, &stat.Username,
+			&stat.TeamName, &stat.TotalAssigned,
+			&stat.OpenAssigned); err != nil {
 			return nil, fmt.Errorf("scan reviewer stat: %w", err)
 		}
 
@@ -68,7 +71,8 @@ FROM pull_requests
 	totalPR := int(agg.Total.Int64)
 
 	var totalAssignments int
-	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM pull_request_reviewers`).Scan(&totalAssignments); err != nil {
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM pull_request_reviewers`).
+		Scan(&totalAssignments); err != nil {
 		return model.PullRequestStats{}, fmt.Errorf("count reviewer assignments: %w", err)
 	}
 
