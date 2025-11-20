@@ -1,0 +1,39 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: reviewchecker
+      POSTGRES_USER: reviewbot
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+        test: ["CMD", "pg_isready", "-U", "reviewbot", "-d", "reviewchecker", "-h", "db"]
+        interval: 5s
+        timeout: 3s
+        retries: 5
+
+  migrate:
+    image: postgres:15
+    command: ["sh", "-c", "psql postgres://reviewbot:secret@db:5432/reviewchecker?sslmode=disable -f /migrations/000001_init.up.sql" ]
+    volumes:
+      - ./migrations:/migrations
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build: .
+    environment:
+      - CONFIG_PATH=/app/configs/developer.yaml
+      - DSN=postgres://reviewbot:secret@db:5432/reviewchecker?sslmode=disable
+    depends_on:
+      - migrate
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
