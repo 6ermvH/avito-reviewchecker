@@ -72,7 +72,7 @@ func (s *Service) UpdateTeam(ctx context.Context, teamName string, users []model
 	switch {
 	case err == nil:
 		return ErrTeamExists
-	case err != nil && !errors.Is(err, repository.ErrNotFound):
+	case !errors.Is(err, repository.ErrNotFound):
 		return fmt.Errorf("find team %q: %w", teamName, err)
 	}
 
