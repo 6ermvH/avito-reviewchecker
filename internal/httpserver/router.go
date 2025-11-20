@@ -407,12 +407,14 @@ func mapPRShortList(prs []model.PullRequest) []httpmodel.PullRequestShort {
 }
 
 var (
-	errUserIDRequired   = errors.New("user_id is required")
-	errUsernameRequired = errors.New("username is required")
+	errUserIDRequired     = errors.New("user_id is required")
+	errUsernameRequired   = errors.New("username is required")
+	errDuplicateMemberIDs = errors.New("duplicate user_id in members")
 )
 
 func buildTeamUsers(members []httpmodel.TeamMember) ([]model.User, error) {
 	users := make([]model.User, 0, len(members))
+	seen := make(map[string]struct{}, len(members))
 
 	for _, member := range members {
 		switch {
@@ -421,6 +423,11 @@ func buildTeamUsers(members []httpmodel.TeamMember) ([]model.User, error) {
 		case member.Username == "":
 			return nil, errUsernameRequired
 		}
+
+		if _, exists := seen[member.UserID]; exists {
+			return nil, errDuplicateMemberIDs
+		}
+		seen[member.UserID] = struct{}{}
 
 		users = append(users, model.User{
 			ID:       member.UserID,
