@@ -49,13 +49,14 @@ type PullRequest struct {
 type ErrorCode string
 
 const (
-	ErrorCodeNotFound    ErrorCode = "NOT_FOUND"
-	ErrorCodePRMerged    ErrorCode = "PR_MERGED"
-	ErrorCodeNotAssigned ErrorCode = "NOT_ASSIGNED"
-	ErrorCodeNoCandidate ErrorCode = "NO_CANDIDATE"
-	ErrorCodeTeamExists  ErrorCode = "TEAM_EXISTS"
-	ErrorCodePRExists    ErrorCode = "PR_EXISTS"
-	ErrorCodeInternal    ErrorCode = "INTERNAL_ERROR"
+	ErrorCodeNotFound     ErrorCode = "NOT_FOUND"
+	ErrorCodePRMerged     ErrorCode = "PR_MERGED"
+	ErrorCodeNotAssigned  ErrorCode = "NOT_ASSIGNED"
+	ErrorCodeNoCandidate  ErrorCode = "NO_CANDIDATE"
+	ErrorCodeTeamExists   ErrorCode = "TEAM_EXISTS"
+	ErrorCodePRExists     ErrorCode = "PR_EXISTS"
+	ErrorCodeInternal     ErrorCode = "INTERNAL_ERROR"
+	ErrorCodeInvalidInput ErrorCode = "INVALID_REQUEST"
 )
 
 type PullRequestResponse struct {

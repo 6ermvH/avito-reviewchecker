@@ -27,13 +27,13 @@ func HandleTeamAdd(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req httpmodel.Team
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid JSON")
+			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "invalid JSON")
 
 			return
 		}
 
 		if req.TeamName == "" {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "team_name is required")
+			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "team_name is required")
 
 			return
 		}
@@ -97,13 +97,13 @@ func HandleSetUserActive(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req httpmodel.SetUserActiveRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid JSON")
+			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "invalid JSON")
 
 			return
 		}
 
 		if req.UserID == "" {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "user_id is required")
+			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "user_id is required")
 
 			return
 		}
@@ -150,13 +150,13 @@ func HandleCreatePR(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req httpmodel.PullRequestCreateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid JSON")
+			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "invalid JSON")
 
 			return
 		}
 
 		if req.ID == "" || req.Name == "" || req.AuthorID == "" {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "missing required fields")
+			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "missing required fields")
 
 			return
 		}
@@ -178,13 +178,13 @@ func HandleMergePR(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req httpmodel.PullRequestMergeRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid JSON")
+			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "invalid JSON")
 
 			return
 		}
 
 		if req.ID == "" {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "pull_request_id is required")
+			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "pull_request_id is required")
 
 			return
 		}
@@ -209,7 +209,7 @@ func HandleReassignPR(svc Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req httpmodel.PullRequestReassignRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid JSON")
+			writeError(w, http.StatusBadRequest, string(httpmodel.ErrorCodeInvalidInput), "invalid JSON")
 
 			return
 		}
@@ -218,7 +218,7 @@ func HandleReassignPR(svc Service) http.HandlerFunc {
 			writeError(
 				w,
 				http.StatusBadRequest,
-				"INVALID_REQUEST",
+				string(httpmodel.ErrorCodeInvalidInput),
 				"pull_request_id and old_user_id are required",
 			)
 
