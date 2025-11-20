@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/6ermvH/avito-reviewchecker/cmd/reviewchecker/app"
 	"github.com/6ermvH/avito-reviewchecker/cmd/reviewchecker/config"
 )
 
 func main() {
-	cfg, err := config.Load("configs/developer.yaml")
+	cfg, err := config.Load(os.Getenv("CONFIG_PATH"))
 	if err != nil {
 		panic(err)
 	}
