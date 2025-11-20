@@ -124,4 +124,10 @@ SQL миграции лежат в папке `migrations/`. `docker-compose.yml
 ```bash
 curl -X POST http://localhost:8080/team/add -H 'Content-Type: application/json' \
   -d '{"team_name":"backend","members":[{"user_id":"u1","username":"Alice","is_active":true}]}'
+
+# статистика по ревьюверам
+curl http://localhost:8080/stats/reviewers
+
+# агрегированная статистика по PR
+curl http://localhost:8080/stats/pullRequests
 ```
