@@ -3,33 +3,39 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_DB: reviewchecker
-      POSTGRES_USER: reviewbot
-      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-        test: ["CMD", "pg_isready", "-U", "reviewbot", "-d", "reviewchecker", "-h", "db"]
+        test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}", "-h", "db"]
         interval: 5s
         timeout: 3s
         retries: 5
 
   migrate:
-    image: postgres:15
-    command: ["sh", "-c", "psql postgres://reviewbot:secret@db:5432/reviewchecker?sslmode=disable -f /migrations/000001_init.up.sql" ]
-    volumes:
-      - ./migrations:/migrations
+    image: migrate/migrate:v4.17.1
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./migrations:/migrations:ro
+    command: [
+      "-path=/migrations",
+      "-database=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable",
+      "-verbose",
+      "up"
+    ]
+    restart: "no"
 
   app:
     build: .
     environment:
-      - CONFIG_PATH=/app/configs/developer.yaml
-      - DSN=postgres://reviewbot:secret@db:5432/reviewchecker?sslmode=disable
+      - CONFIG_PATH=${CONFIG_PATH}
+      - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
     depends_on:
       - migrate
     ports:
