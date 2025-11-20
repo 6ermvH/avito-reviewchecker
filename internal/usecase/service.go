@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/6ermvH/avito-reviewchecker/internal/model"
@@ -11,7 +12,8 @@ import (
 )
 
 type Service struct {
-	repo Repository
+	repo   Repository
+	logger *slog.Logger
 }
 
 var (
@@ -21,39 +23,55 @@ var (
 )
 
 //go:generate mockgen -source=service.go -destination=../repository/mocks/repository_mock.go -package=mocks_repository
+//nolint:interfacebloat
 type Repository interface {
 	GetTeamByName(ctx context.Context, name string) (model.Team, error)
 	CreateTeam(ctx context.Context, name string) (model.Team, error)
-	InsertTeamMembers(ctx context.Context, teamID string, users []model.User) error
-	ListTeamMembers(ctx context.Context, teamID string) ([]model.User, error)
+	InsertTeamMembers(ctx context.Context, teamName string, users []model.User) error
+	ListTeamMembers(ctx context.Context, teamName string) ([]model.User, error)
 	GetUserByID(ctx context.Context, userID string) (model.User, error)
 
 	SetUserActivity(ctx context.Context, userID string, active bool) (model.User, error)
 
 	CreatePullRequest(ctx context.Context, pr model.PullRequest) (model.PullRequest, error)
 	GetPullRequest(ctx context.Context, prID string) (model.PullRequest, error)
-	UpdatePullRequestStatus(ctx context.Context, prID string, status model.PRStatus, mergedAt *time.Time) (model.PullRequest, error)
+	UpdatePullRequestStatus(
+		ctx context.Context,
+		prID string,
+		status model.PRStatus,
+		mergedAt *time.Time,
+	) (model.PullRequest, error)
 	ListReviewerPullRequests(ctx context.Context, userID string) ([]model.PullRequest, error)
-	ReplaceReviewer(ctx context.Context, prID, oldUserID, newUserID string) (model.PullRequest, error)
+	ReplaceReviewer(
+		ctx context.Context,
+		prID, oldUserID, newUserID string,
+	) (model.PullRequest, error)
 }
 
-func New(repo Repository) *Service {
-	return &Service{repo: repo}
+func New(repo Repository, logger *slog.Logger) *Service {
+	return &Service{
+		repo:   repo,
+		logger: logger,
+	}
 }
 
 func (s *Service) UpdateTeam(ctx context.Context, teamName string, users []model.User) error {
 	team, err := s.repo.GetTeamByName(ctx, teamName)
+
+	s.logger.Debug("update team", "teamName", teamName, "users", users)
+
 	switch {
-	case err == repository.ErrNotFound:
+	case errors.Is(err, repository.ErrNotFound):
 		team, err = s.repo.CreateTeam(ctx, teamName)
 	case err != nil:
 		return fmt.Errorf("find team %q: %w", teamName, err)
 	}
+
 	if err != nil {
 		return fmt.Errorf("create team %q: %w", teamName, err)
 	}
 
-	if err := s.repo.InsertTeamMembers(ctx, team.ID, users); err != nil {
+	if err := s.repo.InsertTeamMembers(ctx, team.Name, users); err != nil {
 		return fmt.Errorf("upsert team %q members: %w", teamName, err)
 	}
 
@@ -61,12 +79,14 @@ func (s *Service) UpdateTeam(ctx context.Context, teamName string, users []model
 }
 
 func (s *Service) GetTeam(ctx context.Context, teamName string) (model.Team, []model.User, error) {
+	s.logger.Debug("get team", "teamName", teamName)
+
 	team, err := s.repo.GetTeamByName(ctx, teamName)
 	if err != nil {
 		return team, nil, fmt.Errorf("find team %q: %w", teamName, err)
 	}
 
-	users, err := s.repo.ListTeamMembers(ctx, team.ID)
+	users, err := s.repo.ListTeamMembers(ctx, team.Name)
 	if err != nil {
 		return team, users, fmt.Errorf("find users from team %q: %w", teamName, err)
 	}
@@ -75,6 +95,8 @@ func (s *Service) GetTeam(ctx context.Context, teamName string) (model.Team, []m
 }
 
 func (s *Service) ListReviews(ctx context.Context, userID string) ([]model.PullRequest, error) {
+	s.logger.Debug("list reviews", "userID", userID)
+
 	pullRequests, err := s.repo.ListReviewerPullRequests(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("find prs, where user %q reviewed: %w", userID, err)
@@ -83,7 +105,13 @@ func (s *Service) ListReviews(ctx context.Context, userID string) ([]model.PullR
 	return pullRequests, nil
 }
 
-func (s *Service) SetUserActive(ctx context.Context, userID string, active bool) (model.User, error) {
+func (s *Service) SetUserActive(
+	ctx context.Context,
+	userID string,
+	active bool,
+) (model.User, error) {
+	s.logger.Debug("set user active", "userID", userID, "active", active)
+
 	user, err := s.repo.SetUserActivity(ctx, userID, active)
 	if err != nil {
 		return model.User{}, fmt.Errorf("change is_active to user %q: %w", userID, err)
@@ -92,13 +120,18 @@ func (s *Service) SetUserActive(ctx context.Context, userID string, active bool)
 	return user, nil
 }
 
-func (s *Service) CreatePR(ctx context.Context, prID, prName, authorID string) (model.PullRequest, error) {
+func (s *Service) CreatePR(
+	ctx context.Context,
+	prID, prName, authorID string,
+) (model.PullRequest, error) {
+	s.logger.Debug("create pull request", "prID", prID, "prName", prName, "authorID", authorID)
+
 	author, err := s.repo.GetUserByID(ctx, authorID)
 	if err != nil {
 		return model.PullRequest{}, fmt.Errorf("find author %q: %w", authorID, err)
 	}
 
-	members, err := s.repo.ListTeamMembers(ctx, author.TeamID)
+	members, err := s.repo.ListTeamMembers(ctx, author.TeamName)
 	if err != nil {
 		return model.PullRequest{}, fmt.Errorf("list team members for author %q: %w", authorID, err)
 	}
@@ -115,13 +148,21 @@ func (s *Service) CreatePR(ctx context.Context, prID, prName, authorID string) (
 
 	created, err := s.repo.CreatePullRequest(ctx, pr)
 	if err != nil {
-		return model.PullRequest{}, fmt.Errorf("create pr with id %q name %q for user %q: %w", prID, prName, authorID, err)
+		return model.PullRequest{}, fmt.Errorf(
+			"create pr with id %q name %q for user %q: %w",
+			prID,
+			prName,
+			authorID,
+			err,
+		)
 	}
 
 	return created, nil
 }
 
 func (s *Service) MergePR(ctx context.Context, prID string) (model.PullRequest, error) {
+	s.logger.Debug("merge pull request", "prID", prID)
+
 	pr, err := s.repo.GetPullRequest(ctx, prID)
 	if err != nil {
 		return model.PullRequest{}, fmt.Errorf("set pr %q is merged: %w", prID, err)
@@ -132,6 +173,7 @@ func (s *Service) MergePR(ctx context.Context, prID string) (model.PullRequest, 
 	}
 
 	now := time.Now().UTC()
+
 	pr, err = s.repo.UpdatePullRequestStatus(ctx, prID, model.PRStatusMerged, &now)
 	if err != nil {
 		return model.PullRequest{}, fmt.Errorf("set pr %q is merged: %w", prID, err)
@@ -140,11 +182,17 @@ func (s *Service) MergePR(ctx context.Context, prID string) (model.PullRequest, 
 	return pr, nil
 }
 
-func (s *Service) ReassignReviewer(ctx context.Context, prID, oldUserID string) (model.PullRequest, string, error) {
+func (s *Service) ReassignReviewer(
+	ctx context.Context,
+	prID, oldUserID string,
+) (model.PullRequest, string, error) {
+	s.logger.Debug("reassign reviewer", "prID", prID, "oldUserID", oldUserID)
+
 	pr, err := s.repo.GetPullRequest(ctx, prID)
 	if err != nil {
 		return model.PullRequest{}, "", fmt.Errorf("find pr %q: %w", prID, err)
 	}
+
 	if pr.Status == model.PRStatusMerged {
 		return model.PullRequest{}, "", ErrPRMerged
 	}
@@ -158,9 +206,13 @@ func (s *Service) ReassignReviewer(ctx context.Context, prID, oldUserID string) 
 		return model.PullRequest{}, "", fmt.Errorf("find reviewer %q: %w", oldUserID, err)
 	}
 
-	members, err := s.repo.ListTeamMembers(ctx, reviewer.TeamID)
+	members, err := s.repo.ListTeamMembers(ctx, reviewer.TeamName)
 	if err != nil {
-		return model.PullRequest{}, "", fmt.Errorf("list team members for team %q: %w", reviewer.TeamID, err)
+		return model.PullRequest{}, "", fmt.Errorf(
+			"list team members for team %q: %w",
+			reviewer.TeamName,
+			err,
+		)
 	}
 
 	candidates := filterCandidates(members, pr, oldUserID)
@@ -172,7 +224,13 @@ func (s *Service) ReassignReviewer(ctx context.Context, prID, oldUserID string) 
 
 	updated, err := s.repo.ReplaceReviewer(ctx, prID, oldUserID, targetID)
 	if err != nil {
-		return model.PullRequest{}, "", fmt.Errorf("replace reviewer %q -> %q for pr %q: %w", oldUserID, targetID, prID, err)
+		return model.PullRequest{}, "", fmt.Errorf(
+			"replace reviewer %q -> %q for pr %q: %w",
+			oldUserID,
+			targetID,
+			prID,
+			err,
+		)
 	}
 
 	return updated, targetID, nil
@@ -184,6 +242,7 @@ func isReviewerAssigned(pr model.PullRequest, reviewerID string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -194,38 +253,49 @@ func filterCandidates(members []model.User, pr model.PullRequest, removedReviewe
 	}
 
 	candidates := make([]string, 0)
+
 	for _, member := range members {
 		if !member.IsActive {
 			continue
 		}
+
 		if member.ID == pr.AuthorID {
 			continue
 		}
+
 		if member.ID == removedReviewer {
 			continue
 		}
+
 		if _, ok := existing[member.ID]; ok {
 			continue
 		}
+
 		candidates = append(candidates, member.ID)
 	}
+
 	return candidates
 }
 
 func selectInitialReviewers(authorID string, members []model.User) []string {
 	candidates := make([]string, 0, len(members))
+
 	for _, member := range members {
 		if !member.IsActive {
 			continue
 		}
+
 		if member.ID == authorID {
 			continue
 		}
+
 		candidates = append(candidates, member.ID)
 	}
 
+	//nolint:mnd
 	if len(candidates) > 2 {
 		return candidates[:2]
 	}
+
 	return candidates
 }

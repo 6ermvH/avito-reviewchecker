@@ -11,11 +11,14 @@ import (
 type Config struct {
 	HTTP HTTPConfig `yaml:"server"`
 	Log  LogConfig  `yaml:"log"`
-	DB   DBConfig
+	DB   DBConfig   `yaml:"db"`
 }
 
 type HTTPConfig struct {
-	Addr string `validate:"required" yaml:"addr"`
+	Addr         string `validate:"required" yaml:"addr"`
+	ReadTimeout  int    `validate:"required" yaml:"readTimeout"`
+	WriteTimeout int    `validate:"required" yaml:"writeTimeout"`
+	IdleTimeout  int    `validate:"required" yaml:"idleTimeout"`
 }
 
 type LogConfig struct {
@@ -23,7 +26,7 @@ type LogConfig struct {
 }
 
 type DBConfig struct {
-	DSN string `validate:"required"`
+	DSN string `validate:"required" yaml:"dsn"`
 }
 
 func Load(path string) (*Config, error) {
@@ -33,6 +36,7 @@ func Load(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load config from %q: %w", path, err)
 	}
+	//nolint:errcheck
 	defer file.Close()
 
 	if err := yaml.NewDecoder(file).Decode(cfg); err != nil {

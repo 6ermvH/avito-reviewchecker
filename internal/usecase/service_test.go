@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -20,23 +21,23 @@ func TestUpdateTeam(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks_repository.NewMockRepository(ctrl)
-	service := New(repo)
+	service := New(repo, slog.Default())
 	members := []model.User{}
 
 	t.Run("Good: team exists", func(t *testing.T) {
-		team := model.Team{ID: uuid.NewString(), Name: "team"}
+		team := model.Team{Name: "team"}
 		repo.EXPECT().
 			GetTeamByName(gomock.Any(), "team").
 			Return(team, nil)
 		repo.EXPECT().
-			InsertTeamMembers(gomock.Any(), team.ID, members).
+			InsertTeamMembers(gomock.Any(), team.Name, members).
 			Return(nil)
 
 		require.NoError(t, service.UpdateTeam(context.Background(), "team", members))
 	})
 
 	t.Run("Good: create new team", func(t *testing.T) {
-		team := model.Team{ID: uuid.NewString(), Name: "created"}
+		team := model.Team{Name: "created"}
 		repo.EXPECT().
 			GetTeamByName(gomock.Any(), "created").
 			Return(model.Team{}, repository.ErrNotFound)
@@ -44,7 +45,7 @@ func TestUpdateTeam(t *testing.T) {
 			CreateTeam(gomock.Any(), "created").
 			Return(team, nil)
 		repo.EXPECT().
-			InsertTeamMembers(gomock.Any(), team.ID, members).
+			InsertTeamMembers(gomock.Any(), team.Name, members).
 			Return(nil)
 
 		require.NoError(t, service.UpdateTeam(context.Background(), "created", members))
@@ -59,12 +60,12 @@ func TestUpdateTeam(t *testing.T) {
 	})
 
 	t.Run("Bad: insert members error", func(t *testing.T) {
-		team := model.Team{ID: uuid.NewString(), Name: "team"}
+		team := model.Team{Name: "team"}
 		repo.EXPECT().
 			GetTeamByName(gomock.Any(), "team").
 			Return(team, nil)
 		repo.EXPECT().
-			InsertTeamMembers(gomock.Any(), team.ID, members).
+			InsertTeamMembers(gomock.Any(), team.Name, members).
 			Return(errors.New("insert error"))
 
 		require.Error(t, service.UpdateTeam(context.Background(), "team", members))
@@ -76,10 +77,10 @@ func TestGetTeam(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks_repository.NewMockRepository(ctrl)
-	service := New(repo)
+	service := New(repo, slog.Default())
 
 	t.Run("Good: success", func(t *testing.T) {
-		team := model.Team{ID: uuid.NewString(), Name: "team"}
+		team := model.Team{Name: "team"}
 		users := []model.User{
 			{ID: uuid.NewString(), Username: "user", IsActive: true},
 		}
@@ -88,7 +89,7 @@ func TestGetTeam(t *testing.T) {
 			GetTeamByName(gomock.Any(), team.Name).
 			Return(team, nil)
 		repo.EXPECT().
-			ListTeamMembers(gomock.Any(), team.ID).
+			ListTeamMembers(gomock.Any(), team.Name).
 			Return(users, nil)
 
 		gotTeam, gotUsers, err := service.GetTeam(context.Background(), team.Name)
@@ -107,12 +108,12 @@ func TestGetTeam(t *testing.T) {
 	})
 
 	t.Run("Bad: list members error", func(t *testing.T) {
-		team := model.Team{ID: uuid.NewString(), Name: t.Name()}
+		team := model.Team{Name: t.Name()}
 		repo.EXPECT().
 			GetTeamByName(gomock.Any(), team.Name).
 			Return(team, nil)
 		repo.EXPECT().
-			ListTeamMembers(gomock.Any(), team.ID).
+			ListTeamMembers(gomock.Any(), team.Name).
 			Return(nil, errors.New("list error"))
 
 		_, _, err := service.GetTeam(context.Background(), team.Name)
@@ -125,7 +126,7 @@ func TestListReviews(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks_repository.NewMockRepository(ctrl)
-	service := New(repo)
+	service := New(repo, slog.Default())
 
 	t.Run("Good: success", func(t *testing.T) {
 		expected := []model.PullRequest{
@@ -155,7 +156,7 @@ func TestSetUserActive(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks_repository.NewMockRepository(ctrl)
-	service := New(repo)
+	service := New(repo, slog.Default())
 
 	t.Run("Good: updated", func(t *testing.T) {
 		user := model.User{ID: "user", IsActive: true}
@@ -183,14 +184,14 @@ func TestCreatePR(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks_repository.NewMockRepository(ctrl)
-	service := New(repo)
+	service := New(repo, slog.Default())
 
-	author := model.User{ID: "author", TeamID: "team"}
+	author := model.User{ID: "author", TeamName: "team"}
 	members := []model.User{
-		{ID: "author", TeamID: "team", IsActive: true},
-		{ID: "u1", TeamID: "team", IsActive: true},
-		{ID: "u2", TeamID: "team", IsActive: true},
-		{ID: "inactive", TeamID: "team", IsActive: false},
+		{ID: "author", TeamName: "team", IsActive: true},
+		{ID: "u1", TeamName: "team", IsActive: true},
+		{ID: "u2", TeamName: "team", IsActive: true},
+		{ID: "inactive", TeamName: "team", IsActive: false},
 	}
 
 	t.Run("Good: created", func(t *testing.T) {
@@ -258,7 +259,7 @@ func TestMergePR(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks_repository.NewMockRepository(ctrl)
-	service := New(repo)
+	service := New(repo, slog.Default())
 
 	t.Run("Good: already merged", func(t *testing.T) {
 		pr := model.PullRequest{ID: "pr", Status: model.PRStatusMerged}
@@ -321,7 +322,7 @@ func TestReassignReviewer(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks_repository.NewMockRepository(ctrl)
-	service := New(repo)
+	service := New(repo, slog.Default())
 
 	t.Run("Good: reassign", func(t *testing.T) {
 		pr := model.PullRequest{
@@ -330,11 +331,11 @@ func TestReassignReviewer(t *testing.T) {
 			Status:    model.PRStatusOpen,
 			Reviewers: []string{"old", "other"},
 		}
-		reviewer := model.User{ID: "old", TeamID: "team"}
+		reviewer := model.User{ID: "old", TeamName: "team"}
 		members := []model.User{
-			{ID: "old", TeamID: "team", IsActive: true},
-			{ID: "author", TeamID: "team", IsActive: true},
-			{ID: "new", TeamID: "team", IsActive: true},
+			{ID: "old", TeamName: "team", IsActive: true},
+			{ID: "author", TeamName: "team", IsActive: true},
+			{ID: "new", TeamName: "team", IsActive: true},
 		}
 		updated := pr
 		updated.Reviewers = []string{"new", "other"}
@@ -400,7 +401,7 @@ func TestReassignReviewer(t *testing.T) {
 
 	t.Run("Bad: list members error", func(t *testing.T) {
 		pr := model.PullRequest{Status: model.PRStatusOpen, Reviewers: []string{"old"}}
-		reviewer := model.User{ID: "old", TeamID: "team"}
+		reviewer := model.User{ID: "old", TeamName: "team"}
 		repo.EXPECT().
 			GetPullRequest(gomock.Any(), "pr").
 			Return(pr, nil)
@@ -417,10 +418,10 @@ func TestReassignReviewer(t *testing.T) {
 
 	t.Run("Bad: no candidates", func(t *testing.T) {
 		pr := model.PullRequest{AuthorID: "author", Status: model.PRStatusOpen, Reviewers: []string{"old"}}
-		reviewer := model.User{ID: "old", TeamID: "team"}
+		reviewer := model.User{ID: "old", TeamName: "team"}
 		members := []model.User{
-			{ID: "old", TeamID: "team", IsActive: true},
-			{ID: "author", TeamID: "team", IsActive: true},
+			{ID: "old", TeamName: "team", IsActive: true},
+			{ID: "author", TeamName: "team", IsActive: true},
 		}
 
 		repo.EXPECT().
@@ -439,10 +440,10 @@ func TestReassignReviewer(t *testing.T) {
 
 	t.Run("Bad: replace error", func(t *testing.T) {
 		pr := model.PullRequest{AuthorID: "author", Status: model.PRStatusOpen, Reviewers: []string{"old"}}
-		reviewer := model.User{ID: "old", TeamID: "team"}
+		reviewer := model.User{ID: "old", TeamName: "team"}
 		members := []model.User{
-			{ID: "old", TeamID: "team", IsActive: true},
-			{ID: "new", TeamID: "team", IsActive: true},
+			{ID: "old", TeamName: "team", IsActive: true},
+			{ID: "new", TeamName: "team", IsActive: true},
 		}
 
 		repo.EXPECT().
