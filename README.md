@@ -13,6 +13,15 @@ make down
 
 Локальные переменные и подключения задаются в `docker-compose.yml`. и `.env` А параметры сервера и логгера задаются в файлах из папки `configs/`
 
+## Слои проекта
+
+- `cmd/reviewchecker` — точка входа: конфигурация, DI, HTTP-сервер, middleware.
+- `internal/httpserver` — роутер, HTTP-хендлеры и mapping моделей в DTO.
+- `internal/usecase` — бизнес-логика (назначение ревьюеров, reassign, merge, статистика).
+- `internal/repository/postgres` — работа с БД (PostgreSQL), миграции в `migrations/`.
+- `internal/model` — доменные сущности.
+- `test/e2e`, `test/load` — end-to-end и нагрузочные сценарии.
+
 ## Юнит  тесты
 
 ```bash
