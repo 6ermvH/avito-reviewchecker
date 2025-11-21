@@ -19,12 +19,9 @@ clean:
 .PHONY: unit-test
 unit-test:
 	go generate ./...
-	GOCACHE=$(PWD)/.cache/go-build GOMODCACHE=$(PWD)/.cache/go-mod go test ./... -count=1 -cover
-
-.PHONY: integration-test
-integration-test:
-	docker compose -f docker-compose-e2e.yml down -v
-	docker compose -f docker-compose-e2e.yml up --build --force-recreate e2e-tests
+	go test ./internal/... -count=1 -cover
 
 .PHONY: e2e-test
-e2e-test: integration-test
+e2e-test:
+	docker compose -f docker-compose-e2e.yml down -v
+	docker compose -f docker-compose-e2e.yml up --build --force-recreate e2e-tests

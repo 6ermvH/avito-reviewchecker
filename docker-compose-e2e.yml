@@ -45,7 +45,7 @@ services:
       context: .
       dockerfile: Dockerfile.e2e
     environment:
-      - E2E_BASE_URL=http://app:8080
+      - E2E_BASE_URL=${E2E_BASE_URL}
     depends_on:
       app:
         condition: service_started
