@@ -27,3 +27,7 @@ def make_prs_for_user(author: str, count: int):
             }
         )
     return prs
+
+
+def _rand_suffix(length: int = 4) -> str:
+    return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
