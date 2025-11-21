@@ -120,6 +120,53 @@ components:
         status:
           type: string
           enum: [OPEN, MERGED]
+    ReviewerStat:
+      type: object
+      required: [user_id, username, team_name, total_assigned, open_assigned]
+      properties:
+        user_id:
+          type: string
+        username:
+          type: string
+        team_name:
+          type: string
+        total_assigned:
+          type: integer
+        open_assigned:
+          type: integer
+    ReviewerStatsResponse:
+      type: object
+      required: [reviewers]
+      properties:
+        reviewers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewerStat'
+    AuthorStat:
+      type: object
+      required: [author_id, count]
+      properties:
+        author_id:
+          type: string
+        count:
+          type: integer
+    PullRequestStatsResponse:
+      type: object
+      required: [total, open, merged, average_reviewers, by_author]
+      properties:
+        total:
+          type: integer
+        open:
+          type: integer
+        merged:
+          type: integer
+        average_reviewers:
+          type: number
+          format: float
+        by_author:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorStat'
 
 paths:
   /team/add:
@@ -419,3 +466,25 @@ paths:
                     pull_request_name: Add search
                     author_id: u1
                     status: OPEN
+  /stats/reviewers:
+    get:
+      tags: [Stats]
+      summary: Получить количество назначений по ревьюверам
+      responses:
+        '200':
+          description: Список ревьюверов и их статистика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewerStatsResponse'
+  /stats/pullRequests:
+    get:
+      tags: [Stats]
+      summary: Общая статистика по PR (количество, статусы, авторы)
+      responses:
+        '200':
+          description: Агрегированная статистика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequestStatsResponse'
