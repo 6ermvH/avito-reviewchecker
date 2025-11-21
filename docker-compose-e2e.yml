@@ -7,14 +7,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+      - "5433:5432"
     healthcheck:
-        test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}", "-h", "db"]
-        interval: 5s
-        timeout: 3s
-        retries: 5
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}", "-h", "db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   migrate:
     image: migrate/migrate:v4.17.1
@@ -27,8 +25,7 @@ services:
       "-path=/migrations",
       "-database=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable",
       "-verbose",
-      "goto",
-      "2"
+      "up"
     ]
     restart: "no"
 
@@ -38,9 +35,17 @@ services:
       - CONFIG_PATH=${CONFIG_PATH}
       - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
     depends_on:
-      - migrate
+      migrate:
+        condition: service_completed_successfully
     ports:
-      - "8080:8080"
+      - "8081:8080"
 
-volumes:
-  pgdata:
+  e2e-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    environment:
+      - E2E_BASE_URL=http://app:8080
+    depends_on:
+      app:
+        condition: service_started

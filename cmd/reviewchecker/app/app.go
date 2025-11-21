@@ -115,4 +115,6 @@ func registerRoutes(r chi.Router, svc httpserver.Service) {
 		r.Get("/reviewers", httpserver.HandleReviewerStats(svc))
 		r.Get("/pullRequests", httpserver.HandlePullRequestStats(svc))
 	})
+
+	r.Get("/healthz", httpserver.HandleHealthz())
 }

@@ -17,6 +17,7 @@ make down
 
 ```bash
 make unit-test        # go generate + go test
+make e2e-test         # docker-compose-e2e up + e2e tests
 ```
 
 ## Нагрузочное тестирование
@@ -27,6 +28,18 @@ make unit-test        # go generate + go test
 ./scripts/load_test.sh               # по умолчанию http://localhost:8080/team/add
 ./scripts/load_test.sh http://...    # свой адрес
 ```
+
+## E2E тестирование
+
+В репозитории есть простые сквозные тесты (`test/e2e`) и отдельный docker-compose (`docker-compose-e2e.yml`), который поднимает БД, выполняет миграции, стартует приложение и запускает контейнер с `go test`.
+
+```bash
+make e2e-test
+# либо вручную
+docker compose -f docker-compose-e2e.yml up --build e2e-tests
+```
+
+`E2E_BASE_URL` можно переопределить через `.env`, чтобы тесты ходили в другой инстанс сервиса.
 
 ### Результаты
 
@@ -130,4 +143,7 @@ curl http://localhost:8080/stats/reviewers
 
 # агрегированная статистика по PR
 curl http://localhost:8080/stats/pullRequests
+
+# проверка здоровья
+curl http://localhost:8080/healthz
 ```

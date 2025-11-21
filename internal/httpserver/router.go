@@ -302,6 +302,14 @@ func HandleReassignPR(svc Service) http.HandlerFunc {
 	}
 }
 
+func HandleHealthz() http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{
+			"status": "ok",
+		})
+	}
+}
+
 func writeDomainError(w http.ResponseWriter, err error, overrides map[string]int) {
 	status := http.StatusInternalServerError
 	code := httpmodel.ErrorCodeInternal

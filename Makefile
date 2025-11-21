@@ -23,5 +23,8 @@ unit-test:
 
 .PHONY: integration-test
 integration-test:
-	docker compose -f docker-compose-test.yml up --build tests
-	docker compose -f docker-compose-test.yml down
+	docker compose -f docker-compose-e2e.yml down -v
+	docker compose -f docker-compose-e2e.yml up --build --force-recreate e2e-tests
+
+.PHONY: e2e-test
+e2e-test: integration-test
