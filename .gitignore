@@ -1,3 +1,5 @@
 .cache/
 *mock*
 .obsidian/
+.venv
+__pycache__
